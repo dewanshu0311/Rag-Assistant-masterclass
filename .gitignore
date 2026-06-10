@@ -1,0 +1,36 @@
+# Python Cache & Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Jupyter Checkpoints
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/
+
+# Environments & Sensitive Configs
+.env
+*.env
+.env.local
+.env.*.local
+.streamlit/secrets.toml
+
+# Local databases and vector stores
+**/chroma_fixed_store/
+**/faiss_index/
+*.db
+*.sqlite3
+
+# IDE / Editor configurations
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# OS Files
+Thumbs.db
+Desktop.ini
+.DS_Store
