@@ -36,7 +36,27 @@ load_dotenv()
 
 LLM_PROVIDER = "groq"
 LLM_MODEL = "llama-3.3-70b-versatile"
-CORPUS_PATH = os.getenv("CORPUS_PATH", "../zyro-dynamics-hr-corpus/")
+
+# Dynamic corpus path resolution to handle both local and Streamlit Community Cloud execution CWDs
+_base_dir = os.path.dirname(os.path.abspath(__file__))
+_parent_dir = os.path.dirname(_base_dir)
+_path_options = [
+    os.path.join(_parent_dir, "zyro-dynamics-hr-corpus"),
+    os.path.join(_base_dir, "zyro-dynamics-hr-corpus"),
+    os.path.join(os.getcwd(), "zyro-dynamics-hr-corpus"),
+    "../zyro-dynamics-hr-corpus/",
+    "./zyro-dynamics-hr-corpus/"
+]
+
+CORPUS_PATH = os.getenv("CORPUS_PATH")
+if not CORPUS_PATH:
+    for path in _path_options:
+        if os.path.exists(path) and os.path.isdir(path):
+            CORPUS_PATH = path
+            break
+    if not CORPUS_PATH:
+        CORPUS_PATH = "../zyro-dynamics-hr-corpus/"
+
 EMBEDDING_MODEL = "all-MiniLM-L6-v2"
 CHUNK_SIZE = 1000
 CHUNK_OVERLAP = 200
@@ -237,6 +257,10 @@ def check_guardrail(question: str, llm=None) -> bool:
     """
     chain = OOS_PROMPT | llm | StrOutputParser()
     classification = chain.invoke({"question": question}).strip().upper()
+    
+    # "IN_SCOPE" is a substring of "OUT_OF_SCOPE", so check "OUT_OF_SCOPE" first
+    if "OUT_OF_SCOPE" in classification:
+        return False
     return "IN_SCOPE" in classification
 
 
