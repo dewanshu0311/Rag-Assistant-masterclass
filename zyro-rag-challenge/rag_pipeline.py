@@ -200,7 +200,20 @@ def rag_chain(question: str, retriever=None, llm=None):
 
     # Generate
     chain = RAG_PROMPT | llm | StrOutputParser()
-    answer = chain.invoke({"context": context, "question": question})
+    
+    # Try calling the model with up to 3 retries in case of rate limits or network drops
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            answer = chain.invoke({"context": context, "question": question})
+            break
+        except Exception as e:
+            if attempt == max_retries - 1:
+                print(f"Error calling LLM after {max_retries} attempts: {e}")
+                raise e
+            sleep_time = (attempt + 1) * 2
+            print(f"LLM call failed (attempt {attempt + 1}/{max_retries}). Retrying in {sleep_time}s... Error: {e}")
+            time.sleep(sleep_time)
 
     return {
         "answer": answer,
@@ -256,7 +269,20 @@ def check_guardrail(question: str, llm=None) -> bool:
     Returns True if the question is IN_SCOPE, False otherwise.
     """
     chain = OOS_PROMPT | llm | StrOutputParser()
-    classification = chain.invoke({"question": question}).strip().upper()
+    
+    # Try calling the model with up to 3 retries in case of rate limits or network drops
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            classification = chain.invoke({"question": question}).strip().upper()
+            break
+        except Exception as e:
+            if attempt == max_retries - 1:
+                print(f"Error calling guardrail LLM after {max_retries} attempts: {e}")
+                raise e
+            sleep_time = (attempt + 1) * 2
+            print(f"Guardrail LLM call failed (attempt {attempt + 1}/{max_retries}). Retrying in {sleep_time}s... Error: {e}")
+            time.sleep(sleep_time)
     
     # "IN_SCOPE" is a substring of "OUT_OF_SCOPE", so check "OUT_OF_SCOPE" first
     if "OUT_OF_SCOPE" in classification:
