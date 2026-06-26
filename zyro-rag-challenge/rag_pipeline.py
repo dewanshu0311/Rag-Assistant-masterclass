@@ -527,7 +527,14 @@ def hybrid_retrieve(question: str, final_k: int = 15):
     if reranker_model:
         scores = reranker_model.predict([(question, doc.page_content) for doc in top_candidates])
         scored_candidates = sorted(zip(top_candidates, scores), key=lambda x: x[1], reverse=True)
-        return [doc for doc, _ in scored_candidates[:4]]
+        best_score = scored_candidates[0][1]
+        final_docs = []
+        for doc, score in scored_candidates:
+            if len(final_docs) < 2:
+                final_docs.append(doc)
+            elif len(final_docs) < 4 and (best_score - score) <= 2.5:
+                final_docs.append(doc)
+        return final_docs
         
     return top_candidates
 
@@ -837,28 +844,16 @@ def initialize_pipeline(corpus_path: str = CORPUS_PATH) -> dict:
         print("Loading CrossEncoder reranker ('cross-encoder/ms-marco-MiniLM-L-6-v2')...")
         from sentence_transformers import CrossEncoder
         reranker_model = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2')
-    
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     index_path = os.path.join(BASE_DIR, "faiss_index")
-
-    # --- Diagnostics ---
-    print(f"[DIAG] os.getcwd()          = {os.getcwd()}")
-    print(f"[DIAG] BASE_DIR             = {BASE_DIR}")
-    print(f"[DIAG] index_path           = {index_path}")
-    print(f"[DIAG] os.path.exists(index_path) = {os.path.exists(index_path)}")
-    print(f"[DIAG] index.faiss exists   = {os.path.exists(os.path.join(index_path, 'index.faiss'))}")
-    print(f"[DIAG] index.pkl exists     = {os.path.exists(os.path.join(index_path, 'index.pkl'))}")
 
     if os.path.exists(index_path):
         print(f"Loading prebuilt FAISS index from '{index_path}'...")
         try:
             vectorstore = FAISS.load_local(index_path, embeddings, allow_dangerous_deserialization=True)
             print("FAISS index loaded successfully.")
-            print(f"type(vectorstore) = {type(vectorstore)}")
         except Exception as e:
-            import traceback
             print(f"FAISS.load_local() FAILED with exception: {e}")
-            traceback.print_exc()
             print("Falling back to building FAISS index from scratch...")
             vectorstore = build_vectorstore(chunks, embeddings)
             vectorstore.save_local(index_path)
@@ -878,13 +873,11 @@ def initialize_pipeline(corpus_path: str = CORPUS_PATH) -> dict:
         "vectorstore": vectorstore,
         "retriever": retriever,
         "llm": llm,
+        "reranker_model": reranker_model,
     }
 
     print("=" * 60)
     print("Pipeline ready! (V21b)")
-    print(f"type(vectorstore) = {type(vectorstore)}")
-    print(f"type(_pipeline['vectorstore']) = {type(_pipeline['vectorstore'])}")
-    print(f"vectorstore is _pipeline['vectorstore'] == {vectorstore is _pipeline['vectorstore']}")
     print("=" * 60)
     return _pipeline
 
