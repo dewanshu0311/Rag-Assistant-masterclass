@@ -825,16 +825,36 @@ def initialize_pipeline(corpus_path: str = CORPUS_PATH) -> dict:
     chunks = chunk_documents(documents)          # sets module-level `chunks`
     embeddings = init_embeddings()
     
-    index_path = "faiss_index"
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    index_path = os.path.join(BASE_DIR, "faiss_index")
+
+    # --- Diagnostics ---
+    print(f"[DIAG] os.getcwd()          = {os.getcwd()}")
+    print(f"[DIAG] BASE_DIR             = {BASE_DIR}")
+    print(f"[DIAG] index_path           = {index_path}")
+    print(f"[DIAG] os.path.exists(index_path) = {os.path.exists(index_path)}")
+    print(f"[DIAG] index.faiss exists   = {os.path.exists(os.path.join(index_path, 'index.faiss'))}")
+    print(f"[DIAG] index.pkl exists     = {os.path.exists(os.path.join(index_path, 'index.pkl'))}")
+
     if os.path.exists(index_path):
         print(f"Loading prebuilt FAISS index from '{index_path}'...")
-        vectorstore = FAISS.load_local(index_path, embeddings, allow_dangerous_deserialization=True)
+        try:
+            vectorstore = FAISS.load_local(index_path, embeddings, allow_dangerous_deserialization=True)
+            print("FAISS index loaded successfully.")
+            print(f"type(vectorstore) = {type(vectorstore)}")
+        except Exception as e:
+            import traceback
+            print(f"FAISS.load_local() FAILED with exception: {e}")
+            traceback.print_exc()
+            print("Falling back to building FAISS index from scratch...")
+            vectorstore = build_vectorstore(chunks, embeddings)
+            vectorstore.save_local(index_path)
     else:
         print("Building FAISS index...")
-        vectorstore = build_vectorstore(chunks, embeddings)  # sets module-level `vectorstore`
+        vectorstore = build_vectorstore(chunks, embeddings)
         print(f"Saving FAISS index to '{index_path}'...")
         vectorstore.save_local(index_path)
-        
+
     retriever = create_retriever(vectorstore)
     llm = make_llm()                             # sets module-level `llm`
 
