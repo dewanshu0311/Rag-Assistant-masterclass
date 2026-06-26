@@ -78,6 +78,7 @@ CURRENT_GROQ_KEY_INDEX: int = 0
 llm = None          # set by initialize_pipeline(); used by invoke_prompt_once()
 vectorstore = None  # set by initialize_pipeline(); used by hybrid_retrieve()
 chunks: list = []   # set by initialize_pipeline(); used by hybrid_retrieve()
+reranker_model = None # set by initialize_pipeline(); used by hybrid_retrieve()
 
 # Cached pipeline dict (keyed so app.py stat cards work)
 _pipeline: dict = {}
@@ -521,7 +522,14 @@ def hybrid_retrieve(question: str, final_k: int = 15):
         key=lambda item: (lexical_score(question, item[0]) + item[1], item[1]),
         reverse=True,
     )
-    return [doc for doc, _ in reranked[:final_k]]
+    top_candidates = [doc for doc, _ in reranked[:final_k]]
+    
+    if reranker_model:
+        scores = reranker_model.predict([(question, doc.page_content) for doc in top_candidates])
+        scored_candidates = sorted(zip(top_candidates, scores), key=lambda x: x[1], reverse=True)
+        return [doc for doc, _ in scored_candidates[:4]]
+        
+    return top_candidates
 
 
 def format_docs(docs):
@@ -795,7 +803,7 @@ def initialize_pipeline(corpus_path: str = CORPUS_PATH) -> dict:
         documents, chunks, embeddings, vectorstore, retriever, llm
     (all keys required by app.py stat cards and ask_bot call)
     """
-    global _pipeline, vectorstore, chunks, llm, GROQ_API_KEYS, CURRENT_GROQ_KEY_INDEX
+    global _pipeline, vectorstore, chunks, llm, GROQ_API_KEYS, CURRENT_GROQ_KEY_INDEX, reranker_model
 
     if _pipeline:
         print("Pipeline already initialized.")
@@ -824,6 +832,11 @@ def initialize_pipeline(corpus_path: str = CORPUS_PATH) -> dict:
     documents = load_documents(corpus_path)
     chunks = chunk_documents(documents)          # sets module-level `chunks`
     embeddings = init_embeddings()
+    
+    if reranker_model is None:
+        print("Loading CrossEncoder reranker ('cross-encoder/ms-marco-MiniLM-L-6-v2')...")
+        from sentence_transformers import CrossEncoder
+        reranker_model = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2')
     
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     index_path = os.path.join(BASE_DIR, "faiss_index")
