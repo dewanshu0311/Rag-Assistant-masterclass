@@ -869,6 +869,9 @@ def initialize_pipeline(corpus_path: str = CORPUS_PATH) -> dict:
 
     print("=" * 60)
     print("Pipeline ready! (V21b)")
+    print(f"type(vectorstore) = {type(vectorstore)}")
+    print(f"type(_pipeline['vectorstore']) = {type(_pipeline['vectorstore'])}")
+    print(f"vectorstore is _pipeline['vectorstore'] == {vectorstore is _pipeline['vectorstore']}")
     print("=" * 60)
     return _pipeline
 

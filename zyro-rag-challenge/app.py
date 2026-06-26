@@ -158,7 +158,7 @@ header {visibility: hidden;}
 
 # ── Initialize RAG Pipeline ─────────────────────────────────
 @st.cache_resource(show_spinner=False)
-def load_pipeline():
+def load_pipeline(version="V21c"):
     """Initialize the RAG pipeline once and cache it."""
     from rag_pipeline import initialize_pipeline
     return initialize_pipeline()
@@ -224,7 +224,7 @@ st.markdown("""
 
 # Load pipeline
 with st.spinner("🔄 Initializing HR Knowledge Base..."):
-    pipeline = load_pipeline()
+    pipeline = load_pipeline(version="V21c")
 
 # Stats Row
 col1, col2, col3, col4 = st.columns(4)
