@@ -34,3 +34,33 @@ __pycache__/
 Thumbs.db
 Desktop.ini
 .DS_Store
+
+# Personal & course content (not part of the competition)
+linkedin_posts/
+notes/
+langchain-rag-nxtwave-main/
+08_enterprise_rag_patterns.md
+09_final_assignment_kaggle.md
+
+# Old notebook versions & dev artifacts
+zyro-rag-challenge/Starter_Notebook_v1.ipynb
+zyro-rag-challenge/VERSIONS.md
+zyro-rag-challenge/build_v*.py
+zyro-rag-challenge/fix_v*.py
+zyro-rag-challenge/test_*.py
+zyro-rag-challenge/debug_*.py
+zyro-rag-challenge/evaluate_*.py
+zyro-rag-challenge/extract_*.py
+zyro-rag-challenge/analyze_*.py
+zyro-rag-challenge/audit_script.py
+zyro-rag-challenge/profile_memory.py
+zyro-rag-challenge/decrypt_qs.py
+zyro-rag-challenge/evaluation_results.json
+zyro-rag-challenge/*_RESEARCH_AND_ANALYSIS.md
+zyro-rag-challenge/*_DESIGN_NOTES.md
+zyro-rag-challenge/AI_HANDOFF.md
+zyro-rag-challenge/PROJECT_DOCUMENTATION.md
+zyro-rag-challenge/sakana_ai_*.ipynb
+zyro-rag-challenge/notebook*.ipynb
+zyro-dynamics-hr-corpus/PDF_Corpus_Content.md
+zyro-dynamics-hr-corpus/extract_pdfs.py

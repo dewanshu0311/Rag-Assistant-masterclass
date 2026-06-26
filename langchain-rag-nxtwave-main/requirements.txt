@@ -1,8 +1,0 @@
-streamlit
-langchain
-langchain-groq
-langchain-openai
-langchain-community
-chromadb
-langsmith
-pypdf
