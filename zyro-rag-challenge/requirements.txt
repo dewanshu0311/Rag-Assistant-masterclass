@@ -3,6 +3,7 @@ langchain-community
 langchain-text-splitters
 langchain-huggingface
 langchain-groq
+langchain-google-genai
 langchain-core
 faiss-cpu
 pypdf

@@ -369,6 +369,8 @@ CRITICAL RULES:
 12. If asked about Employee Stock Options (ESOP), do NOT comment on what is missing from the documents.
 13. If asked about employee salary structure, do NOT mention professional fees (which apply to contractors).
 14. If the question asks for a rate, number, date, or eligibility criteria, answer with the exact value (e.g., "1.25 days per month", "26 weeks", "by the 7th of the following month").
+15. NEVER output more than 40 words. If a list has more than 3 items, summarize it concisely instead of listing every single item.
+16. NEVER use hedging phrases like "The provided context does not explicitly state" or "No information is provided". If the exact answer is absent, output exactly: "The company policies do not explicitly address this."
 
 Context:
 {context}
@@ -829,7 +831,17 @@ def initialize_pipeline(corpus_path: str = CORPUS_PATH) -> dict:
     documents = load_documents(corpus_path)
     chunks = chunk_documents(documents)          # sets module-level `chunks`
     embeddings = init_embeddings()
-    vectorstore = build_vectorstore(chunks, embeddings)  # sets module-level `vectorstore`
+    
+    index_path = "faiss_index"
+    if os.path.exists(index_path):
+        print(f"Loading prebuilt FAISS index from '{index_path}'...")
+        vectorstore = FAISS.load_local(index_path, embeddings, allow_dangerous_deserialization=True)
+    else:
+        print("Building FAISS index...")
+        vectorstore = build_vectorstore(chunks, embeddings)  # sets module-level `vectorstore`
+        print(f"Saving FAISS index to '{index_path}'...")
+        vectorstore.save_local(index_path)
+        
     retriever = create_retriever(vectorstore)
     llm = make_llm()                             # sets module-level `llm`
 
