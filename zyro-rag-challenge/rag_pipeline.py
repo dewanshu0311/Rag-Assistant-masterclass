@@ -39,6 +39,11 @@ from langchain_community.vectorstores import FAISS
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_groq import ChatGroq
+from langchain_openai import ChatOpenAI
+try:
+    from langchain_google_genai import ChatGoogleGenerativeAI
+except ImportError:
+    ChatGoogleGenerativeAI = None
 from langsmith import traceable
 
 # ============================================================
@@ -161,8 +166,27 @@ def _load_langsmith_key() -> Optional[str]:
 # 3. LLM — NOTEBOOK-MATCHING FUNCTIONS
 # ============================================================
 
-def make_llm() -> ChatGroq:
-    """Create a fresh ChatGroq instance (matches notebook Cell 9)."""
+def make_llm():
+    """Create an LLM instance based on LLM_PROVIDER."""
+    if LLM_PROVIDER == "aicredits":
+        api_key = os.environ.get("AICREDITS_API_KEY", "")
+        # AICredits provides an OpenAI-compatible endpoint
+        base_url = os.environ.get("AICREDITS_BASE_URL", "https://api.aicredits.com/v1") 
+        return ChatOpenAI(
+            model=LLM_MODEL,
+            temperature=0.0,
+            max_tokens=512,
+            api_key=api_key,
+            base_url=base_url
+        )
+    if LLM_PROVIDER == "gemini" and ChatGoogleGenerativeAI is not None:
+        api_key = os.environ.get("GOOGLE_API_KEY", "")
+        return ChatGoogleGenerativeAI(
+            model=LLM_MODEL,
+            temperature=0.0,
+            max_output_tokens=512,
+            google_api_key=api_key,
+        )
     return ChatGroq(
         model=LLM_MODEL,
         temperature=0.0,
@@ -197,8 +221,35 @@ def _rotate_groq_key() -> bool:
 
 def load_documents(corpus_path: str = CORPUS_PATH):
     """Load all PDF policy documents from the corpus directory."""
-    loader = PyPDFDirectoryLoader(corpus_path, glob="*.pdf")
+    # Auto-discover corpus path on Kaggle
+    if not os.path.exists(corpus_path):
+        print(f"Path '{corpus_path}' not found. Auto-discovering...")
+        kaggle_input = "/kaggle/input"
+        if os.path.exists(kaggle_input):
+            for entry in os.listdir(kaggle_input):
+                candidate = os.path.join(kaggle_input, entry)
+                if os.path.isdir(candidate):
+                    # Check if this directory has PDFs
+                    import glob as globmod
+                    pdfs = globmod.glob(os.path.join(candidate, "**/*.pdf"), recursive=True)
+                    if pdfs:
+                        corpus_path = candidate
+                        print(f"Auto-discovered corpus at: {corpus_path}")
+                        break
+
+    loader = PyPDFDirectoryLoader(corpus_path, glob="**/*.pdf")
     documents = loader.load()
+
+    # Fallback: if no PDFs found, try subdirectories
+    if not documents and os.path.exists(corpus_path):
+        for entry in os.listdir(corpus_path):
+            sub = os.path.join(corpus_path, entry)
+            if os.path.isdir(sub):
+                loader = PyPDFDirectoryLoader(sub, glob="**/*.pdf")
+                documents = loader.load()
+                if documents:
+                    print(f"Found PDFs in subdirectory: {sub}")
+                    break
 
     # Enrich metadata with a clean document title derived from the filename
     for doc in documents:
