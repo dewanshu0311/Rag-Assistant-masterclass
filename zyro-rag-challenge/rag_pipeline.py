@@ -466,7 +466,7 @@ QUERY_EXPANSIONS = {
     "salary": "credited by 7th payroll cut-off 24th following month bank account",
     "payroll": "credited by 7th payroll cut-off 24th following month",
     "ctc": "salary bands grade CTC range bonus target L4 Senior 16 lakhs 26 lakhs 10 percent compensation benefits",
-    "l4": "Senior grade CTC range Rs 16 lakhs Rs 26 lakhs bonus target 10 percent CTC salary band",
+    "l4": "Senior grade CTC range Rs 16 lakhs Rs 26 lakhs bonus target 10 percent CTC salary band notice period 60 days L4 to L6 resignation",
     "insurance": "group medical insurance Rs 500000 spouse dependent children premiums fully paid company personal accident term life",
     "health insurance": "group medical insurance Rs 500000 spouse dependent children premiums fully paid company",
     "esop": "employee stock options grade L5 and above 4-year vesting schedule 1-year cliff probation confirmation",
