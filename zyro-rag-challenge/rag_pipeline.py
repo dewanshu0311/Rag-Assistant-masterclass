@@ -1,5 +1,5 @@
 """
-Zyro Dynamics HR Help Desk — RAG Pipeline (V24)
+Zyro Dynamics HR Help Desk — RAG Pipeline (V26)
 ==================================================
 Internal logic synchronized with Kaggle notebook (notebook80936d8ef0).
 Public function signatures kept backward-compatible with app.py:
@@ -37,6 +37,23 @@ V24 change (prompt restoration — the real regression fix):
     health insurance != PA/term-life, WFH types != eligibility checklist, EL accrual !=
     probation rate, ESOP != what's-missing, salary != professional fees). These are the
     proven winner, not new untested constraints.
+
+V25 change (match V19's exact LLM config — the final regression fix):
+  - Groq LLM set to temperature=0.1, max_tokens=512 (was 0.0 / 2048). This is the
+    EXACT config of the documented 89.93 winner (from fix_v19_groq.py). The 512-token
+    cap forces concise answers; the prior 2048 cap let answers balloon into off-topic
+    content the semantic-similarity grader penalizes. V24 had V19's prompt + reranker
+    off but still scored 88.83 because temperature/max_tokens were never reverted.
+    Retained from V24: V19 prompt, reranker off, improved POLICY_HINTS/QUERY_EXPANSIONS.
+
+V26 change (cross-policy retrieval recall — V25 scored 90.70, new best):
+  - V25's generation config is UNCHANGED (temp=0.1, max_tokens=512, V19 prompt, reranker off):
+    that combination scored 90.70 and is left exactly as-is.
+  - Added POLICY_HINTS + QUERY_EXPANSIONS for multi-policy questions whose answer spans two
+    documents, where the 2nd policy was under-retrieved: notice-period/resignation/probation/
+    retirement/gratuity -> Onboarding&Separation; attendance -> Leave + Performance.
+    Example: "L4 notice period and CTC" needs Separation (60 days for L4-L6) AND Compensation
+    (Rs 16-26L). This is retrieval recall only; no change to generation. Pure additive candidates.
 
 Author: Dewanshu
 Competition: NIAT Masterclass RAG Challenge (Kaggle)
@@ -227,8 +244,8 @@ def make_llm():
         )
     return ChatGroq(
         model=LLM_MODEL,
-        temperature=0.0,
-        max_tokens=2048,
+        temperature=0.1,
+        max_tokens=512,
     )
 
 
@@ -423,6 +440,12 @@ POLICY_HINTS = {
     "onboarding": ["Onboarding And Separation Policy"],
     "separation": ["Onboarding And Separation Policy"],
     "notice": ["Onboarding And Separation Policy"],
+    "notice period": ["Onboarding And Separation Policy"],
+    "resignation": ["Onboarding And Separation Policy"],
+    "probation": ["Onboarding And Separation Policy"],
+    "retirement": ["Onboarding And Separation Policy"],
+    "gratuity": ["Onboarding And Separation Policy", "Compensation And Benefits Policy"],
+    "attendance": ["Leave Policy", "Performance Review Policy"],
     "travel": ["Travel And Expense Policy"],
     "expense": ["Travel And Expense Policy"],
     "posh": ["Prevention Of Sexual Harassment Policy"],
@@ -459,6 +482,9 @@ QUERY_EXPANSIONS = {
     "apply": "recruitment hiring offer letter appointment background verification joining documents pre-joining activities",
     "recruitment": "hiring offer appointment background verification joining documents pre-joining activities offer letter",
     "hiring": "recruitment offer letter appointment background verification joining documents pre-joining",
+    "notice period": "grade based L1 to L3 30 days L4 to L6 60 days L7 to L9 90 days resignation buyout ZyroHR portal",
+    "probation": "6 months probation period L7 and above exempt confirmation ESOP eligibility full leave accrual review month 3 and 6",
+    "attendance": "attendance leave balance performance rating bonus eligibility",
 }
 
 # --- RAG prompt (V24 — restored exact V19 template, the documented 89.93 winner) ---
@@ -746,7 +772,7 @@ def extractive_fallback_answer(question: str, docs) -> str:
     return fallback
 
 
-@traceable(name="rag_chain_v24")
+@traceable(name="rag_chain_v26")
 def rag_chain(question: str, retriever=None, llm=None) -> dict:
     """
     Execute the RAG pipeline: hybrid retrieve → LLM generate → clean → return.
@@ -853,7 +879,7 @@ def local_guardrail_decision(question: str) -> Optional[bool]:
     return None
 
 
-@traceable(name="guardrail_check_v24")
+@traceable(name="guardrail_check_v26")
 def check_guardrail(question: str, llm=None) -> bool:
     """
     Classify whether a question is in-scope for the HR chatbot.
@@ -882,7 +908,7 @@ def check_guardrail(question: str, llm=None) -> bool:
     return "IN_SCOPE" in classification
 
 
-@traceable(name="ask_bot_v24")
+@traceable(name="ask_bot_v26")
 def ask_bot(question: str, retriever=None, llm=None) -> dict:
     """
     Main entry point: check guardrails, then run RAG if in-scope.
@@ -925,7 +951,7 @@ def initialize_pipeline(corpus_path: str = CORPUS_PATH) -> dict:
         return _pipeline
 
     print("=" * 60)
-    print("Initializing Zyro Dynamics HR RAG Pipeline (V24)")
+    print("Initializing Zyro Dynamics HR RAG Pipeline (V26)")
     print("=" * 60)
 
     # --- Secrets (loaded lazily here, not at import time) ---
@@ -941,7 +967,7 @@ def initialize_pipeline(corpus_path: str = CORPUS_PATH) -> dict:
     if langsmith_key:
         os.environ["LANGCHAIN_API_KEY"] = langsmith_key
         os.environ["LANGCHAIN_TRACING_V2"] = "true"
-        os.environ.setdefault("LANGCHAIN_PROJECT", "zyro-rag-challenge-v24")
+        os.environ.setdefault("LANGCHAIN_PROJECT", "zyro-rag-challenge-v26")
 
     # --- Pipeline components ---
     documents = load_documents(corpus_path)
@@ -987,7 +1013,7 @@ def initialize_pipeline(corpus_path: str = CORPUS_PATH) -> dict:
     }
 
     print("=" * 60)
-    print("Pipeline ready! (V24)")
+    print("Pipeline ready! (V26)")
     print("=" * 60)
     return _pipeline
 
