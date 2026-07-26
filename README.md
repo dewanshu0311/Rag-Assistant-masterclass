@@ -1,20 +1,40 @@
-# RAG Assistant Masterclass Portfolio 🏢🚀
+<div align="center">
 
-Welcome to the **RAG Assistant Masterclass Portfolio**! This repository is a comprehensive showcase of building, optimizing, and deploying production-grade **Retrieval-Augmented Generation (RAG)** systems. 
+# 🏢 RAG Assistant Masterclass
 
-It contains multiple projects, hands-on labs, and learning resources covering semantic search, LLM orchestration, evaluation tracing, and premium front-end interfaces.
+### Zyro Dynamics HR AI Help Desk — Kaggle RAG Challenge
+
+[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg?logo=python&logoColor=white)](https://python.org)
+[![Groq](https://img.shields.io/badge/Groq-llama--3.3--70b-F55036.svg)](https://groq.com)
+[![Embeddings](https://img.shields.io/badge/BGE-large--en--v1.5-00C853.svg)](https://huggingface.co/BAAI/bge-large-en-v1.5)
+[![FAISS](https://img.shields.io/badge/FAISS-hybrid%20retrieval-8A2BE2.svg)](https://github.com/facebookresearch/faiss)
+[![LangChain](https://img.shields.io/badge/LangChain-+%20LangSmith-1C3C3C.svg)](https://langchain.com)
+[![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B.svg?logo=streamlit&logoColor=white)](https://streamlit.io)
+
+**A production-grade Retrieval-Augmented Generation system: an HR help desk that answers
+policy questions from a grounded PDF corpus, refuses out-of-scope questions at the door,
+and cites the document and page it got every answer from.**
+
+[Architecture](#️-architecture--data-flow) · [Features](#-core-features) · [Run it](#-getting-started-locally) · [Deploy](#️-deploying-to-streamlit-community-cloud)
+
+</div>
+
+---
+
+This repository showcases building, optimizing, and deploying production-grade
+**Retrieval-Augmented Generation (RAG)** systems. 
+
+It centres on a production-grade HR help desk built for the Kaggle RAG Challenge, covering semantic
+guardrails, hybrid retrieval, citation grounding, evaluation tracing, and a polished Streamlit front end.
 
 ---
 
 ## 📂 Repository Structure
 
-The repository is structured as a monorepo containing:
+The repository is a monorepo containing:
 
-*   **[`zyro-rag-challenge/`](file:///c:/Rag%20Assistant%20masterclass/zyro-rag-challenge)**: The flagship project—a production-ready HR AI Help Desk for **Zyro Dynamics** featuring semantic guardrails, MMR retrieval, and a premium glassmorphic Streamlit UI.
-*   **[`langchain-rag-nxtwave-main/`](file:///c:/Rag%20Assistant%20masterclass/langchain-rag-nxtwave-main)**: A developer API Documentation Assistant demonstrating LangChain and LangGraph fundamentals, document loading, and vector database management (Chroma).
-*   **[`zyro-dynamics-hr-corpus/`](file:///c:/Rag%20Assistant%20masterclass/zyro-dynamics-hr-corpus)**: The official internal PDF corpus (Employee Handbook, Leave Policies, POSH, WFH Policies) used to ground the HR Assistant.
-*   **[`notes/`](file:///c:/Rag%20Assistant%20masterclass/notes)**: Detailed technical notes documenting key design patterns, evaluation strategies, and enterprise RAG concepts.
-*   **[`linkedin_posts/`](file:///c:/Rag%20Assistant%20masterclass/linkedin_posts)**: Developer updates and walkthroughs sharing learnings from the masterclass.
+*   **[`zyro-rag-challenge/`](zyro-rag-challenge)** — the flagship project: a production-ready HR AI Help Desk for **Zyro Dynamics** featuring semantic guardrails, hybrid retrieval, a prebuilt FAISS index, and a glassmorphic Streamlit UI.
+*   **[`zyro-dynamics-hr-corpus/`](zyro-dynamics-hr-corpus)** — the internal PDF corpus (Employee Handbook, Leave Policy, WFH Policy, POSH, Code of Conduct and more) used to ground the assistant, plus the starter notebook.
 
 ---
 
@@ -26,38 +46,30 @@ An AI-powered chatbot designed to resolve internal HR policy questions for emplo
 
 ```mermaid
 graph TD
-    User([User Question]) --> Guardrail{Semantic Guardrail<br>Groq Classifier}
-    
-    Guardrail -- "OUT_OF_SCOPE" --> Refuse[Polite Refusal Response]
-    Guardrail -- "IN_SCOPE" --> Embed[Embed Query<br>HF all-MiniLM-L6-v2]
-    
-    Embed --> Retrieve[MMR Retrieve top-k chunks<br>FAISS Store]
-    Retrieve --> Context[Format Context + Metadata<br>File Name & Page #]
-    Context --> Prompt[Build Context Grounded Prompt<br>Resolves Zyro/Acrux Aliases]
-    
-    Prompt --> LLM[Groq LLM<br>llama-3.3-70b-versatile]
-    LLM --> Response[Generate Response with Page Citations]
-    
-    Response --> Trace[LangSmith Tracing & Observability]
+    User([User Question]) --> Guardrail{Semantic Guardrail<br>Groq classifier}
+
+    Guardrail -- "OUT_OF_SCOPE" --> Refuse[Polite refusal response]
+    Guardrail -- "IN_SCOPE" --> Embed[Embed query<br>BAAI/bge-large-en-v1.5]
+
+    Embed --> Retrieve[hybrid_retrieve<br>dense FAISS + lexical POLICY_HINTS]
+    Retrieve --> Context[Format context + metadata<br>file name & page #]
+    Context --> Prompt[Context-grounded prompt<br>resolves Zyro/Acrux aliases]
+
+    Prompt --> LLM[Groq LLM<br>llama-3.3-70b-versatile<br>9-key rotation on rate limit]
+    LLM --> Clean[clean_answer post-processing]
+    Clean --> Response[Answer with page citations]
+    LLM -. "all keys exhausted" .-> Fallback[extractive_fallback_answer]
+
+    Response --> Trace[LangSmith tracing & observability]
 ```
 
 ### ✨ Core Features
 1.  **Groq-Powered Generation**: Leverages `llama-3.3-70b-versatile` for lightning-fast, highly accurate responses.
 2.  **Semantic Guardrails**: Pre-classifies incoming user queries using a dynamic LLM prompt to identify out-of-scope or competitor questions (e.g., questions about Zoho/Salesforce policies or company revenue) and blocks them instantly.
-3.  **FAISS Vector Database**: Uses HuggingFace's `all-MiniLM-L6-v2` embeddings combined with **Maximal Marginal Relevance (MMR)** search to retrieve diverse, relevant chunks while avoiding redundancy.
-4.  **Citations & Metadata Grounding**: Automatically appends source document titles and page numbers to response chunks.
-5.  **Premium Glassmorphic UI**: A gorgeous Streamlit dashboard featuring custom dark mode styling, linear gradients, real-time performance stats, and a clean chat history interface.
-
----
-
-## 📖 Project 2: LangChain API Documentation Assistant
-
-A development-focused assistant designed to help software engineers navigate and query technical API documentation.
-
-### ✨ Core Features
-*   **Chroma DB Integration**: Stores and queries chunked Markdown developer guides.
-*   **Interactive Notebooks**: Includes `Handson_lab1.ipynb` showcasing document loading, recursive chunking, and similarity searches.
-*   **Streamlit Developer Interface**: A lightweight UI designed for rapid testing of retrieval configurations and model temperatures.
+3.  **Hybrid Retrieval over FAISS**: `BAAI/bge-large-en-v1.5` embeddings in a prebuilt FAISS index, combined by `hybrid_retrieve()` with a domain-specific lexical pass (`POLICY_HINTS`) so policy-specific wording is not lost to pure vector similarity.
+4.  **Resilient generation**: nine-key Groq rotation on rate-limit errors, with an `extractive_fallback_answer()` path so the app degrades to a grounded extract instead of failing when every key is exhausted.
+5.  **Citations & Metadata Grounding**: Automatically appends source document titles and page numbers to response chunks.
+6.  **Premium Glassmorphic UI**: A Streamlit dashboard featuring custom dark-mode styling, linear gradients, real-time performance stats, and a clean chat-history interface.
 
 ---
 
